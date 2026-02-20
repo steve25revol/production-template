@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app_dev
+      POSTGRES_DB: app_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-keycloak-schema.sql:/docker-entrypoint-initdb.d/01-keycloak-schema.sql
+      # To enable Apache AGE property graph:
+      # 1. Switch image to apache/age:PG16_latest
+      # 2. Uncomment the init script below
+      # - ./init-age.sql:/docker-entrypoint-initdb.d/02-age.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/app_dev?currentSchema=keycloak
+      KC_DB_USERNAME: app
+      KC_DB_PASSWORD: app_dev
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    command: start-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  minio:
+    image: minio/minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  nats:
+    image: nats:2-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  # ─── OPTIONAL: Apache Jena Fuseki (RDF/SPARQL Triple Store) ───
+  # Uncomment for projects needing semantic data / ontologies
+  # Use cases: FDA regulation ontologies, ISO standards mapping,
+  # device classification hierarchies, SNOMED/LOINC medical terminologies
+  #
+  # fuseki:
+  #   image: stain/jena-fuseki:4.10.0
+  #   environment:
+  #     ADMIN_PASSWORD: admin
+  #     FUSEKI_DATASET_1: knowledge
+  #   ports:
+  #     - "3030:3030"
+  #   volumes:
+  #     - fuseki_data:/fuseki
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  # fuseki_data:

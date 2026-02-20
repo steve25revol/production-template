@@ -1,0 +1,65 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app_dev
+          POSTGRES_DB: app_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Sync database
+        run: npx prisma db push
+        env:
+          DATABASE_URL: postgresql://app:app_dev@localhost:5432/app_dev
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Run tests
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://app:app_dev@localhost:5432/app_dev
+
+      - name: Install Playwright
+        run: npx playwright install chromium --with-deps
+
+      - name: Visual regression
+        run: |
+          npm run dev &
+          cd frontend && npm run dev &
+          sleep 5
+          npx playwright test
+        env:
+          DATABASE_URL: postgresql://app:app_dev@localhost:5432/app_dev

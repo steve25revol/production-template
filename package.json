@@ -1,0 +1,31 @@
+{
+  "name": "production-template",
+  "version": "1.0.0",
+  "description": "25RevolAI production template for Life Sciences OS",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:push": "npx prisma db push",
+    "db:studio": "npx prisma studio",
+    "test": "vitest",
+    "capture": "npx playwright test"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.18.0",
+    "@prisma/client": "^5.20.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "prisma": "^5.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
